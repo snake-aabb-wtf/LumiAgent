@@ -24,16 +24,22 @@ LIST_MAX_ENTRIES = 200                 # list_directory 默认最多列出条数
 # 路径解析
 # ----------------------------------------------------------------------
 def _resolve(root: Path, raw: str | None) -> Path:
+    """把工具收到的路径解析成最终路径。
+
+    路径语义（跨平台一致，无例外）：
+    - 空 → 工作根目录本身；
+    - **其余一律相对工作根目录解析**，包括以 "/" 或 "\\" 开头的写法
+      （模型常把 "notes/foo.txt" 写成 "/notes/foo.txt"，按相对处理，而非穿透到系统根），
+      也包括 Windows 盘符写法（C:\\foo → 当作 root 下的 C:/foo）。
+    这是“Agent 根目录沙箱”式的直觉：路径默认相对根目录，不显式开放系统绝对路径。
+    """
     raw = (raw or "").strip()
     if not raw:
         return root
-    p = Path(raw)
-    if p.is_absolute():
-        return p
-    # 模型可能给出 "/notes/x.txt" 或 "\\notes\\x.txt" 这类根相对写法，
-    # 去掉前导分隔符后按根目录相对解析
     while raw.startswith("/") or raw.startswith("\\"):
         raw = raw[1:]
+    if not raw:
+        return root
     return (root / raw).resolve()
 
 

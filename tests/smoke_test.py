@@ -197,14 +197,22 @@ def test_tools(root: Path) -> None:
     ok, text = execute_tool(root, "read_file", '{"path": "ok.txt"}')
     check("文本文件不受守卫影响", ok and "中文" in text)
 
-    # 反斜杠 / 前导斜杠路径
+    # 路径语义：无例外相对工作根目录（前导 / 与 \ 一律 strip）
     write_file(root, "d.txt", "x")
     r = read_file(root, "/d.txt")
     check("前导斜杠按根相对解析", "x" in r)
+    r = read_file(root, "\\d.txt")
+    check("前导反斜杠按根相对解析", "x" in r)
     r = read_file(root, "d.txt")
     check("普通相对路径", "x" in r)
-    r = read_file(root, str(root / "d.txt"))
-    check("绝对路径", "x" in r)
+    # 子目录相对路径 + 前导 strip 叠加
+    write_file(root, "sub/dir/f.txt", "deep")
+    r = read_file(root, "/sub/dir/f.txt")
+    check("前导斜杠 + 子目录仍按根相对", "deep" in r)
+    # 空路径 → 返回根目录
+    from lumiagent.tools import _resolve as _r
+    check("空路径 = 根目录", _r(root, "") == root.resolve() or _r(root, "") == root)
+    check("只含分隔符 = 根目录", _r(root, "/").resolve() == root.resolve() or _r(root, "\\").resolve() == root.resolve())
 
     # 异常路径
     ok, text = execute_tool(root, "read_file", "{bad json")
