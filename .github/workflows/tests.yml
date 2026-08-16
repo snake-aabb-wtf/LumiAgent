@@ -1,0 +1,36 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run core + e2e smoke tests (headless, no API key)
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python tests/smoke_test.py
+
+      - name: Run headless TUI smoke test
+        env:
+          PYTHONIOENCODING: utf-8
+          TERM: xterm
+        run: python tests/tui_smoke.py
